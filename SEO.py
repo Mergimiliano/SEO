@@ -7,7 +7,7 @@ import csv
 import os
 from flask import Flask, request, jsonify, send_file
 
-# Disable warnings for insecure requests
+# Disable SSL warnings (not recommended for production)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
@@ -119,7 +119,6 @@ def write_to_csv(data, filename='results.csv'):
 @app.route('/get_csv', methods=['POST'])
 def get_csv():
     try:
-        # Get the keyword from the POST request JSON body
         keyword_to_search = request.json.get('keyword_to_search')
         if not keyword_to_search:
             return jsonify({"error": "Missing 'keyword_to_search' parameter"}), 400
@@ -136,16 +135,19 @@ def get_csv():
                 page_data["keyword_density"] = density_data["keyword_density"]
                 data.append(page_data)
 
-        # Write to CSV and return the file
+        # Generate CSV file
         output_file = write_to_csv(data)
+
+        # Send the file for download as an attachment
         return send_file(
             output_file,
             mimetype='text/csv',
-            download_name='results.csv',
-            as_attachment=True
+            as_attachment=True,
+            download_name='results.csv'  # Specify the filename for download
         )
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
