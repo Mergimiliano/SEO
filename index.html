@@ -13,6 +13,16 @@
         f.parentNode.insertBefore(j, f);
       })(window, document, "script", "dataLayer", "GTM-PLBLQ9TN");
     </script>
+    <script>
+      let startTime = Date.now();
+      window.addEventListener("beforeunload", () => {
+        const timeSpent = Math.round((Date.now() - startTime) / 1000);
+        window.dataLayer.push({
+          event: "time_spent",
+          time_spent: timeSpent,
+        });
+      });
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Google Analytics Test for ITS</title>
