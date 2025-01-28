@@ -1,0 +1,3 @@
+url,title,lunghezza title,description,lunghezza description,h1,tot h1,h2,tot h2,h3,tot h3,h4,tot h4,h5,tot h5,h6,tot h6,total_words,keyword_count,keyword_density
+example.com,Example Title,15,Example Description,45,H1,2,H2,3,H3,4,H4,5,H5,6,H6,7,300,20,5.5
+example.org,Another Title,20,Another Description,50,H1,3,H2,4,H3,5,H4,6,H5,7,H6,8,350,25,6.5
