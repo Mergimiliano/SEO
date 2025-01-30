@@ -10,6 +10,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import html2canvas from "html2canvas";
 
 const AveragesToGraph = () => {
   const [averages1, setAverages1] = useState([]);
@@ -69,6 +70,20 @@ const AveragesToGraph = () => {
     average2: averages2[index]?.average2 || 0,
   }));
 
+  const handleDownloadChart = () => {
+    const chartElement = document.getElementById("chart-container");
+
+    html2canvas(chartElement).then((canvas) => {
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL("image/png");
+      link.download = `${fileNames.file1.replace(
+        ".csv",
+        ""
+      )} vs ${fileNames.file2.replace(".csv", "")}.png`;
+      link.click();
+    });
+  };
+
   return (
     <div
       style={{
@@ -98,7 +113,6 @@ const AveragesToGraph = () => {
               style={{ marginLeft: "10px" }}
             />
           </label>
-          <p>{fileNames.file1 && `Loaded: ${fileNames.file1}`}</p>
         </div>
         <div>
           <label>
@@ -110,16 +124,19 @@ const AveragesToGraph = () => {
               style={{ marginLeft: "10px" }}
             />
           </label>
-          <p>{fileNames.file2 && `Loaded: ${fileNames.file2}`}</p>
         </div>
       </div>
 
       {mergedData.length > 0 && (
-        <div style={{ width: "100%", flex: "1" }}>
+        <div
+          style={{ width: "100%", flex: "1", marginBottom: "20px" }}
+          id="chart-container"
+        >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={mergedData}
               margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+              style={{ backgroundColor: "#fff" }}
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="field" tick={{ fontSize: 16 }} />
@@ -146,6 +163,24 @@ const AveragesToGraph = () => {
               />
             </BarChart>
           </ResponsiveContainer>
+        </div>
+      )}
+
+      {averages1.length > 0 && averages2.length > 0 && (
+        <div>
+          <button
+            onClick={handleDownloadChart}
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#4CAF50",
+              color: "white",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "16px",
+            }}
+          >
+            Download Chart as PNG
+          </button>
         </div>
       )}
     </div>
