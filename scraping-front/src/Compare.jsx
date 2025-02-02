@@ -16,6 +16,9 @@ const AveragesToGraph = () => {
   const [averages1, setAverages1] = useState([]);
   const [averages2, setAverages2] = useState([]);
   const [fileNames, setFileNames] = useState({ file1: "", file2: "" });
+  const [keyword, setKeyword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [url, setUrl] = useState("");
 
   const targetFields = [
     "lunghezza title",
@@ -39,7 +42,6 @@ const AveragesToGraph = () => {
       skipEmptyLines: true,
       complete: (result) => {
         const parsedData = result.data;
-
         const averagesData = targetFields.map((field) => {
           const total = parsedData.reduce(
             (sum, row) => sum + parseFloat(row[field] || 0),
@@ -72,7 +74,6 @@ const AveragesToGraph = () => {
 
   const handleDownloadChart = () => {
     const chartElement = document.getElementById("chart-container");
-
     html2canvas(chartElement).then((canvas) => {
       const link = document.createElement("a");
       link.href = canvas.toDataURL("image/png");
@@ -84,104 +85,144 @@ const AveragesToGraph = () => {
     });
   };
 
-  return (
-    <div
-      style={{
-        textAlign: "center",
-        height: "90vh",
-        width: "90vw",
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <h1 style={{ marginBottom: "20px" }}>CSV Averages Comparison</h1>
+  const handleDownloadCSV = async () => {
+    if (!keyword) return alert("Please enter a keyword");
 
-      <div style={{ marginBottom: "20px", display: "flex", gap: "20px" }}>
-        <div>
-          <label>
-            <strong>Upload CSV File 1:</strong>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={(e) => handleFileUpload(e, 0)}
-              style={{ marginLeft: "10px" }}
-            />
-          </label>
-        </div>
-        <div>
-          <label>
-            <strong>Upload CSV File 2:</strong>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={(e) => handleFileUpload(e, 1)}
-              style={{ marginLeft: "10px" }}
-            />
-          </label>
-        </div>
+    setLoading(true);
+    try {
+      const response = await fetch("http://127.0.0.1:5000/get_csv", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ keyword_to_search: keyword }),
+      });
+
+      if (!response.ok) throw new Error("Failed to download CSV");
+
+      const blob = await response.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${keyword}-scraping-results.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error downloading CSV:", error);
+      alert("Error downloading CSV");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUrlAnalysis = async () => {
+    if (!keyword || !url) return alert("Please enter a keyword and url");
+
+    setLoading(true);
+    try {
+      const response = await fetch("http://127.0.0.1:5000/analyze_page", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ keyword_to_search: keyword, url }),
+      });
+
+      if (!response.ok) throw new Error("Failed to analyze URL");
+
+      const blob = await response.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${keyword}-url-results.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error analyzing URL:", error);
+      alert("Error analyzing URL");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const containerStyle = {
+    textAlign: "center",
+    height: "90vh",
+    width: "90vw",
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+  };
+
+  const chartContainerStyle = {
+    width: "90%",
+    height: "90%",
+  };
+
+  return (
+    <div style={containerStyle}>
+      <h1>CSV Averages Comparison</h1>
+
+      <div style={{ marginBottom: "20px" }}>
+        <input
+          type="file"
+          accept=".csv"
+          onChange={(e) => handleFileUpload(e, 0)}
+        />
+        <input
+          type="file"
+          accept=".csv"
+          onChange={(e) => handleFileUpload(e, 1)}
+        />
+      </div>
+
+      <div style={{ marginBottom: "20px" }}>
+        <input
+          type="text"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          placeholder="Enter keyword..."
+        />
+        <button onClick={handleDownloadCSV} disabled={loading}>
+          {loading ? "Downloading..." : "Download CSV"}
+        </button>
+      </div>
+
+      <div style={{ marginBottom: "20px" }}>
+        <input
+          type="text"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="Enter URL..."
+        />
+        <button onClick={handleUrlAnalysis} disabled={loading}>
+          {loading ? "Analyzing..." : "Analyze URL"}
+        </button>
       </div>
 
       {mergedData.length > 0 && (
-        <div
-          style={{ width: "100%", flex: "1", marginBottom: "20px" }}
-          id="chart-container"
-        >
+        <div id="chart-container" style={chartContainerStyle}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={mergedData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-              style={{ backgroundColor: "#fff" }}
-            >
+            <BarChart data={mergedData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="field" tick={{ fontSize: 16 }} />
-              <YAxis
-                label={{
-                  value: "Average Value",
-                  angle: -90,
-                  position: "insideLeft",
-                }}
-              />
+              <XAxis dataKey="field" />
+              <YAxis />
               <Tooltip />
               <Legend />
-              <Bar
-                dataKey="average1"
-                fill="#8884d8"
-                name={`Average - ${fileNames.file1 || "File 1"}`}
-                label={{ position: "top", fill: "#000" }}
-              />
-              <Bar
-                dataKey="average2"
-                fill="#82ca9d"
-                name={`Average - ${fileNames.file2 || "File 2"}`}
-                label={{ position: "top", fill: "#000" }}
-              />
+              <Bar dataKey="average1" fill="#8884d8" />
+              <Bar dataKey="average2" fill="#82ca9d" />
             </BarChart>
           </ResponsiveContainer>
         </div>
       )}
 
       {averages1.length > 0 && averages2.length > 0 && (
-        <div>
-          <button
-            onClick={handleDownloadChart}
-            style={{
-              padding: "10px 20px",
-              backgroundColor: "#4CAF50",
-              color: "white",
-              border: "none",
-              cursor: "pointer",
-              fontSize: "16px",
-            }}
-          >
-            Download Chart as PNG
-          </button>
-        </div>
+        <button onClick={handleDownloadChart}>Download Chart as PNG</button>
       )}
     </div>
   );

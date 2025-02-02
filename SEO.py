@@ -6,33 +6,23 @@ import urllib3
 import csv
 import os
 from flask import Flask, request, jsonify, send_file
+from flask_cors import CORS
 
 # Disable SSL warnings (not recommended for production)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
+CORS(app)
 
 def get_serp_results(keyword):
-    """Fetch SERP results from Google for a given keyword."""
-    url = f"https://www.google.com/search?q={keyword}"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    }
-    response = requests.get(url, headers=headers)
+    api_key = "insert_API_KEY"
+    url = f"https://serpapi.com/search?q={keyword}&api_key={api_key}"
 
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.text, 'html.parser')
-        results = []
-        for div in soup.find_all('div', class_='tF2Cxc'):
-            link = div.find('a')['href']
-            if link and 'https://' in link:
-                parsed_url = urlparse(link)
-                clean_url = urlunparse((parsed_url.scheme, parsed_url.netloc, parsed_url.path, '', '', ''))
-                results.append(clean_url)
-        return results[:10]
-    else:
-        print(f"Error: {response.status_code}")
-        return []
+    response = requests.get(url)
+    data = response.json()
+
+    results = [res['link'] for res in data.get('organic_results', [])[:10]]
+    return results
 
 def analyze_page(url):
     """Analyze a page to extract title, meta description, and headings."""
@@ -134,6 +124,39 @@ def get_csv():
                 page_data["keyword_count"] = density_data["keyword_count"]
                 page_data["keyword_density"] = density_data["keyword_density"]
                 data.append(page_data)
+
+        # Generate CSV file
+        output_file = write_to_csv(data)
+
+        # Send the file for download as an attachment
+        return send_file(
+            output_file,
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name='results.csv'  # Specify the filename for download
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/analyze_page', methods=['POST'])
+def get_csv_for_one_page():
+    try:
+        url = request.json.get('url')
+        if not url:
+            return jsonify({"error": "Missing 'url' parameter"}), 400
+        
+        keyword_to_search = request.json.get('keyword_to_search')
+        if not keyword_to_search:
+            return jsonify({"error": "Missing 'keyword_to_search' parameter"}), 400
+        
+        data = []
+        page_data = analyze_page(url)
+        if page_data:
+            density_data = keyword_density(url, keyword_to_search)
+            page_data["total_words"] = density_data["total_words"]
+            page_data["keyword_count"] = density_data["keyword_count"]
+            page_data["keyword_density"] = density_data["keyword_density"]
+            data.append(page_data)
 
         # Generate CSV file
         output_file = write_to_csv(data)
